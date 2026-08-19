@@ -1,0 +1,127 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-appeal-card
+      author: sot-reception-api
+      changes:
+        - createTable:
+            tableName: appeal_card
+            columns:
+              - column:
+                  name: id
+                  type: varchar(64)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: appointment_id
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uk_appeal_card_appointment_id
+                    references: appointment(id)
+                    foreignKeyName: fk_appeal_card_appointment
+              - column:
+                  name: code
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: full_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: phone
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email
+                  type: varchar(255)
+              - column:
+                  name: topic
+                  type: varchar(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: summary
+                  type: text
+              - column:
+                  name: stage
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: previous_appeal_ids
+                  type: text
+              - column:
+                  name: previous_notes
+                  type: text
+              - column:
+                  name: prep_notes
+                  type: text
+              - column:
+                  name: prep_completed_by
+                  type: varchar(255)
+              - column:
+                  name: prep_completed_at
+                  type: timestamp
+              - column:
+                  name: reception_protocol
+                  type: text
+              - column:
+                  name: assignment
+                  type: text
+              - column:
+                  name: control_log
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: final_answer
+                  type: text
+              - column:
+                  name: final_answer_at
+                  type: timestamp
+              - column:
+                  name: feedback
+                  type: text
+              - column:
+                  name: notifications
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: idx_appeal_card_stage
+            tableName: appeal_card
+            columns:
+              - column:
+                  name: stage
+        - createIndex:
+            indexName: idx_appeal_card_code
+            tableName: appeal_card
+            columns:
+              - column:
+                  name: code
+        - createIndex:
+            indexName: idx_appeal_card_phone
+            tableName: appeal_card
+            columns:
+              - column:
+                  name: phone

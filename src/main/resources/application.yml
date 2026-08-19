@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: sot-reception-api
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:h2}
+  jackson:
+    default-property-inclusion: non_null
+    deserialization:
+      fail-on-unknown-properties: false
+  mvc:
+    problemdetails:
+      enabled: false
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /
+
+app:
+  cors:
+    # несколько источников — через запятую, напр. APP_CORS_ORIGINS=https://sot.kg,https://admin.sot.kg
+    allowed-origins: ${APP_CORS_ORIGINS:http://localhost:3000}
+  jwt:
+    secret: ${APP_JWT_SECRET:change-me-development-only-secret-key-please-32bytes+}
+    expiration-minutes: ${APP_JWT_EXPIRATION_MINUTES:480}
+    issuer: sot-reception-api
+  seed:
+    demo-data: ${APP_SEED_DEMO_DATA:true}
+  site:
+    base-url: ${APP_SITE_BASE_URL:https://sot.kg}
+  timezone: Asia/Bishkek
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  level:
+    kg.sot.reception: INFO

@@ -1,0 +1,24 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-eligibility-tree
+      author: sot-reception-api
+      changes:
+        - createTable:
+            tableName: eligibility_tree
+            columns:
+              - column:
+                  name: id
+                  type: int
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: nodes
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false

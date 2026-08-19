@@ -1,0 +1,24 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-site-content
+      author: sot-reception-api
+      changes:
+        - createTable:
+            tableName: site_content
+            columns:
+              - column:
+                  name: id
+                  type: int
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: content
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false

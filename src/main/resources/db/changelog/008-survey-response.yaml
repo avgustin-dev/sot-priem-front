@@ -1,0 +1,33 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-survey-response
+      author: sot-reception-api
+      changes:
+        - createTable:
+            tableName: survey_response
+            columns:
+              - column:
+                  name: id
+                  type: varchar(64)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: submitted_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: court_name
+                  type: varchar(255)
+              - column:
+                  name: answers
+                  type: text
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: idx_survey_response_submitted_at
+            tableName: survey_response
+            columns:
+              - column:
+                  name: submitted_at

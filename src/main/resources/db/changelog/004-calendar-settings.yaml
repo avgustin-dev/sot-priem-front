@@ -1,0 +1,62 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-calendar-settings
+      author: sot-reception-api
+      changes:
+        - createTable:
+            tableName: calendar_settings
+            columns:
+              - column:
+                  name: id
+                  type: int
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: reception_weekdays
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: day_start_minutes
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: day_end_minutes
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: slot_duration_minutes
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: break_minutes
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: booking_horizon_days
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: closed_dates
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: extra_open_dates
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rules_text
+                  type: text
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false

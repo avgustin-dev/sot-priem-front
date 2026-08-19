@@ -1,0 +1,118 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-appointment
+      author: sot-reception-api
+      changes:
+        - createTable:
+            tableName: appointment
+            columns:
+              - column:
+                  name: id
+                  type: varchar(64)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: code
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uk_appointment_code
+              - column:
+                  name: full_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: phone
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email
+                  type: varchar(255)
+              - column:
+                  name: pin_hash
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: topic
+                  type: varchar(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: text
+              - column:
+                  name: appt_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: slot_start
+                  type: varchar(5)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: slot_end
+                  type: varchar(5)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: target_id
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: companions
+                  type: text
+              - column:
+                  name: review_note
+                  type: text
+              - column:
+                  name: history
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: idx_appointment_date_target
+            tableName: appointment
+            columns:
+              - column:
+                  name: appt_date
+              - column:
+                  name: target_id
+        - createIndex:
+            indexName: idx_appointment_phone
+            tableName: appointment
+            columns:
+              - column:
+                  name: phone
+        - createIndex:
+            indexName: idx_appointment_status
+            tableName: appointment
+            columns:
+              - column:
+                  name: status

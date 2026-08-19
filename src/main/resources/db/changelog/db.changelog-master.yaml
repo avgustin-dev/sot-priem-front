@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/001-staff-user.yaml
+  - include:
+      file: db/changelog/002-appointment.yaml
+  - include:
+      file: db/changelog/003-appeal-card.yaml
+  - include:
+      file: db/changelog/004-calendar-settings.yaml
+  - include:
+      file: db/changelog/005-site-content.yaml
+  - include:
+      file: db/changelog/006-eligibility-tree.yaml
+  - include:
+      file: db/changelog/007-survey-config.yaml
+  - include:
+      file: db/changelog/008-survey-response.yaml
