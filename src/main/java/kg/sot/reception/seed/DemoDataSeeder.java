@@ -72,7 +72,11 @@ public class DemoDataSeeder {
                 staffUser("u-resp-2", "otvet2", encoder.encode("otvet123"),
                         "Сыдыкова Меерим Асановна", Role.responsible,
                         "Ответственный по обращениям",
-                        "Отдел анализа судебной практики", now)
+                        "Отдел анализа судебной практики", now),
+                staffUser("u-intake-1", "priem_otdel", encoder.encode("intake123"),
+                        "Бекова Айнура Талантовна", Role.intake,
+                        "Специалист приёмного отдела",
+                        "Отдел по работе с гражданами", now)
         );
         staffUserRepository.saveAll(staff);
     }

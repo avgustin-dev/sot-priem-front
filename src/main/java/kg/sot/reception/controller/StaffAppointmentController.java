@@ -49,7 +49,7 @@ public class StaffAppointmentController {
     }
 
     @PostMapping("/appointments/{id}/confirm")
-    @PreAuthorize("hasAnyRole('RECEPTION','ADMIN')")
+    @PreAuthorize("hasAnyRole('RECEPTION','INTAKE','ADMIN')")
     public PublicAppointment confirm(
             @PathVariable String id,
             @RequestBody(required = false) ConfirmRequest request,
@@ -59,7 +59,7 @@ public class StaffAppointmentController {
     }
 
     @PostMapping("/appointments/{id}/reject")
-    @PreAuthorize("hasAnyRole('RECEPTION','ADMIN')")
+    @PreAuthorize("hasAnyRole('RECEPTION','INTAKE','ADMIN')")
     public PublicAppointment reject(
             @PathVariable String id,
             @Valid @RequestBody RejectRequest request,
@@ -105,7 +105,7 @@ public class StaffAppointmentController {
     }
 
     @PostMapping("/appointments/{id}/reschedule")
-    @PreAuthorize("hasAnyRole('RECEPTION','ADMIN')")
+    @PreAuthorize("hasAnyRole('RECEPTION','INTAKE','ADMIN')")
     public PublicAppointment reschedule(
             @PathVariable String id,
             @Valid @RequestBody RescheduleRequest request,

@@ -4,5 +4,7 @@ public enum Role {
     reception,
     leadership,
     responsible,
-    admin
+    admin,
+    /** Приёмный отдел: только журнал заявок — принять / отклонить / перенести. */
+    intake
 }
