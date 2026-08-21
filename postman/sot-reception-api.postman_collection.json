@@ -1,0 +1,1049 @@
+{
+  "info": {
+    "name": "sot-reception-api",
+    "description": "Сквозные тесты бэкенда платформы приёма граждан ВС КР по контракту docs/backend/openapi.yaml. Запускать всю коллекцию целиком (Runner) сверху вниз — запросы зависят друг от друга через переменные окружения.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "targetId", "value": "reception" },
+    { "key": "citizenPhone", "value": "+996700123456" }
+  ],
+  "item": [
+    {
+      "name": "01. Auth",
+      "item": [
+        {
+          "name": "Login (admin)",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"admin\",\n  \"password\": \"admin123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('токен и профиль присутствуют', () => {",
+                  "    pm.expect(json.token).to.be.a('string').and.not.empty;",
+                  "    pm.expect(json.user.role).to.eql('admin');",
+                  "});",
+                  "pm.environment.set('token', json.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('login = admin', () => pm.expect(pm.response.json().login).to.eql('admin'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02. Public — запись гражданина",
+      "item": [
+        {
+          "name": "Bootstrap",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": "{{baseUrl}}/public/bootstrap"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('содержит site/eligibilityTree/calendar/survey', () => {",
+                  "    pm.expect(json).to.have.all.keys('site', 'eligibilityTree', 'calendar', 'survey');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Available Dates",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/public/dates?targetId={{targetId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["public", "dates"],
+              "query": [{ "key": "targetId", "value": "{{targetId}}" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('есть доступные даты', () => pm.expect(json.dates.length).to.be.above(0));",
+                  "pm.environment.set('bookingDate', json.dates[0]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Slots For Date",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/public/slots?date={{bookingDate}}&targetId={{targetId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["public", "slots"],
+              "query": [
+                { "key": "date", "value": "{{bookingDate}}" },
+                { "key": "targetId", "value": "{{targetId}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('есть свободные слоты', () => pm.expect(json.slots.length).to.be.above(0));",
+                  "pm.environment.set('slotStart', json.slots[0].start);",
+                  "pm.environment.set('slotEnd', json.slots[0].end);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Book Appointment",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/public/appointments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Тестов Тест Тестович\",\n  \"phone\": \"{{citizenPhone}}\",\n  \"email\": \"postman-test@example.com\",\n  \"topic\": \"Тестовое обращение (Postman)\",\n  \"category\": \"organization\",\n  \"description\": \"Автоматический тест бэкенда через Postman.\",\n  \"date\": \"{{bookingDate}}\",\n  \"slotStart\": \"{{slotStart}}\",\n  \"slotEnd\": \"{{slotEnd}}\",\n  \"targetId\": \"{{targetId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('PIN — 4 цифры, статус pending_review', () => {",
+                  "    pm.expect(json.pin).to.match(/^\\d{4}$/);",
+                  "    pm.expect(json.appointment.status).to.eql('pending_review');",
+                  "    pm.expect(json.appointment.code).to.eql(json.code);",
+                  "});",
+                  "pm.environment.set('code', json.code);",
+                  "pm.environment.set('pin', json.pin);",
+                  "pm.environment.set('appointmentId', json.appointment.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lookup By Code",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": "{{baseUrl}}/public/appointments/{{code}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('код совпадает, PIN отсутствует, этап registered', () => {",
+                  "    pm.expect(json.appointment.code).to.eql(pm.environment.get('code'));",
+                  "    pm.expect(json.appointment.pin).to.be.undefined;",
+                  "    pm.expect(json.appealStage).to.eql('registered');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unlock (code + PIN)",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/public/appointments/{{code}}/unlock",
+            "body": { "mode": "raw", "raw": "{\n  \"pin\": \"{{pin}}\"\n}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('это наша запись, PIN не возвращается', () => {",
+                  "    pm.expect(json.id).to.eql(pm.environment.get('appointmentId'));",
+                  "    pm.expect(json.pin).to.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recover Codes By Phone",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/public/recover-codes",
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{citizenPhone}}\"\n}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('код записи найден по телефону', () => {",
+                  "    pm.expect(json.codes).to.include(pm.environment.get('code'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Public Survey",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": "{{baseUrl}}/public/survey"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('есть вопросы анкеты', () => pm.expect(pm.response.json().questions.length).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03. Staff — заявки",
+      "item": [
+        {
+          "name": "List Pending Appointments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/staff/appointments?status=pending_review",
+              "host": ["{{baseUrl}}"],
+              "path": ["staff", "appointments"],
+              "query": [{ "key": "status", "value": "pending_review" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const mine = json.find(a => a.code === pm.environment.get('code'));",
+                  "pm.test('наша заявка есть в списке pending_review', () => pm.expect(mine).to.not.be.undefined);",
+                  "if (mine) pm.environment.set('appointmentId', mine.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Confirm Appointment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/staff/appointments/{{appointmentId}}/confirm",
+            "body": { "mode": "raw", "raw": "{\n  \"note\": \"Подтверждено тестом Postman\"\n}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK, статус confirmed', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('confirmed');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Patch Appointment Data",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/staff/appointments/{{appointmentId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"description\": \"Описание обновлено тестом Postman\"\n}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK, описание обновлено', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().description).to.eql('Описание обновлено тестом Postman');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Staff Users",
+          "request": { "method": "GET", "url": "{{baseUrl}}/staff/users" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const resp = json.find(u => u.role === 'responsible');",
+                  "pm.test('есть хотя бы один ответственный', () => pm.expect(resp).to.not.be.undefined);",
+                  "pm.environment.set('responsibleUserId', resp.id);",
+                  "pm.environment.set('responsibleName', resp.fullName);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04. Staff — обращения (карточка)",
+      "item": [
+        {
+          "name": "List Appeals",
+          "request": { "method": "GET", "url": "{{baseUrl}}/staff/appeals" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const mine = json.find(a => a.appointmentId === pm.environment.get('appointmentId'));",
+                  "pm.test('карточка нашей записи найдена', () => pm.expect(mine).to.not.be.undefined);",
+                  "pm.environment.set('appealId', mine.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete Prep",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/staff/appeals/{{appealId}}/prep",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"summary\": \"Резюме теста Postman\",\n  \"prepNotes\": \"Проверка бэкенда через Postman collection.\",\n  \"category\": \"organization\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK, этап ready_for_reception', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().stage).to.eql('ready_for_reception');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete Reception",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/staff/appeals/{{appealId}}/reception",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"citizenStatement\": \"Заявитель изложил суть тестового обращения.\",\n  \"leadershipExplanation\": \"Даны разъяснения в рамках тестового сценария.\",\n  \"assignmentText\": \"Подготовить тестовый ответ по обращению.\",\n  \"responsibleUserId\": \"{{responsibleUserId}}\",\n  \"responsibleName\": \"{{responsibleName}}\",\n  \"specialistsInvolved\": \"Отдел тестирования\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK, этап in_control, поручение открыто', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.stage).to.eql('in_control');",
+                  "    pm.expect(json.assignment.status).to.eql('open');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add Control Log",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/staff/appeals/{{appealId}}/control",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"Взято в работу\",\n  \"comment\": \"Комментарий из Postman-теста\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK, запись журнала добавлена, поручение in_progress', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.controlLog.length).to.be.above(0);",
+                  "    pm.expect(json.assignment.status).to.eql('in_progress');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set Assignment Status (done)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/staff/appeals/{{appealId}}/assignment-status",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"done\"\n}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK, поручение done', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().assignment.status).to.eql('done');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Final Answer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/staff/appeals/{{appealId}}/answer",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answer\": \"Уважаемый заявитель, ваше тестовое обращение рассмотрено.\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK, этап answered', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.stage).to.eql('answered');",
+                  "    pm.expect(json.finalAnswer).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Appeal By Id",
+          "request": { "method": "GET", "url": "{{baseUrl}}/staff/appeals/{{appealId}}" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK, карточка в этапе answered', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().stage).to.eql('answered');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05. Public — оценка приёма",
+      "item": [
+        {
+          "name": "Submit Feedback",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/public/appointments/{{code}}/feedback",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"respectful\": 5,\n  \"clearNextSteps\": 5,\n  \"convenient\": 4,\n  \"deadlinesMet\": 5,\n  \"comment\": \"Отличная работа приёмной (тест Postman).\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('204 No Content', () => pm.response.to.have.status(204));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lookup After Feedback",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": "{{baseUrl}}/public/appointments/{{code}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK, этап closed, оценка сохранена', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.appealStage).to.eql('closed');",
+                  "    pm.expect(json.feedback.respectful).to.eql(5);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06. Staff — CMS (admin)",
+      "item": [
+        {
+          "name": "Get Calendar",
+          "request": { "method": "GET", "url": "{{baseUrl}}/staff/calendar" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.environment.set('calendarBody', pm.response.body);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Put Calendar (no-op)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/staff/calendar",
+            "body": { "mode": "raw", "raw": "{{calendarBody}}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK, сохранено', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Content",
+          "request": { "method": "GET", "url": "{{baseUrl}}/staff/content" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.environment.set('contentBody', pm.response.body);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Put Content (no-op)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/staff/content",
+            "body": { "mode": "raw", "raw": "{{contentBody}}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK, сохранено', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Eligibility",
+          "request": { "method": "GET", "url": "{{baseUrl}}/staff/eligibility" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.environment.set('eligibilityBody', pm.response.body);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Put Eligibility (no-op)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/staff/eligibility",
+            "body": { "mode": "raw", "raw": "{{eligibilityBody}}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK, сохранено', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Survey (staff)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/staff/survey" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.environment.set('surveyBody', pm.response.body);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Put Survey (no-op)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/staff/survey",
+            "body": { "mode": "raw", "raw": "{{surveyBody}}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK, сохранено', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Survey Responses",
+          "request": { "method": "GET", "url": "{{baseUrl}}/staff/survey/responses" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK, массив ответов', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Analytics",
+          "request": { "method": "GET", "url": "{{baseUrl}}/staff/analytics" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK, форма ответа корректна', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.all.keys('byStage', 'byCategory', 'quality', 'repeated', 'topThemes');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07. Негативные сценарии",
+      "item": [
+        {
+          "name": "Login — неверный пароль (401)",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"login\": \"admin\",\n  \"password\": \"wrong-password\"\n}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 UNAUTHORIZED', () => {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().code).to.eql('UNAUTHORIZED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff-эндпоинт без токена (401)",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": "{{baseUrl}}/staff/appointments"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 UNAUTHORIZED', () => {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().code).to.eql('UNAUTHORIZED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unlock — неверный PIN (409 INVALID_PIN)",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/public/appointments/{{code}}/unlock",
+            "body": { "mode": "raw", "raw": "{\n  \"pin\": \"0000\"\n}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 INVALID_PIN', () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql('INVALID_PIN');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lookup — код не найден (404)",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": "{{baseUrl}}/public/appointments/VS-0000-0000"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 NOT_FOUND', () => {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Booking — пустое тело (400 VALIDATION)",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/public/appointments",
+            "body": { "mode": "raw", "raw": "{}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION', () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('VALIDATION');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Booking — занятый слот (409 SLOT_UNAVAILABLE)",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/public/appointments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Второй Тестов Тестович\",\n  \"phone\": \"+996700999888\",\n  \"topic\": \"Повторная попытка на тот же слот\",\n  \"category\": \"organization\",\n  \"date\": \"{{bookingDate}}\",\n  \"slotStart\": \"{{slotStart}}\",\n  \"slotEnd\": \"{{slotEnd}}\",\n  \"targetId\": \"{{targetId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 SLOT_UNAVAILABLE (слот уже занят предыдущим тестом)', () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql('SLOT_UNAVAILABLE');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (reception) — для проверки прав",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"login\": \"priemnaya\",\n  \"password\": \"priem123\"\n}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK, роль reception', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().user.role).to.eql('reception');",
+                  "});",
+                  "pm.environment.set('receptionToken', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reception пытается менять календарь (403 FORBIDDEN)",
+          "request": {
+            "method": "PUT",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{receptionToken}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/staff/calendar",
+            "body": { "mode": "raw", "raw": "{{calendarBody}}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 FORBIDDEN — роль reception не может менять CMS', () => {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('FORBIDDEN');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08. Staff — отмена/восстановление записи",
+      "item": [
+        {
+          "name": "Cancel Appointment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/staff/appointments/{{appointmentId}}/cancel",
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Тестовая отмена через Postman\"\n}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK, статус cancelled', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('cancelled');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restore Appointment",
+          "request": { "method": "POST", "url": "{{baseUrl}}/staff/appointments/{{appointmentId}}/restore" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK, статус confirmed', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('confirmed');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09. Auth — выход",
+      "item": [
+        {
+          "name": "Logout",
+          "request": { "method": "POST", "url": "{{baseUrl}}/auth/logout" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('204 No Content', () => pm.response.to.have.status(204));"]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
