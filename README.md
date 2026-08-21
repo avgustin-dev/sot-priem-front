@@ -70,6 +70,18 @@ SPRING_PROFILES_ACTIVE=postgres mvn spring-boot:run
 
 Реальная отправка не подключена — `NotificationService` пишет письмо/уведомление в лог и в карточку обращения (`notifications[]`), как и полагается по контракту (см. `docs/backend/README.md` → «Почта и талон»). Зависимость `spring-boot-starter-mail` уже добавлена — для реальной отправки останется настроить `spring.mail.*` и заменить `log.info(...)` на `JavaMailSender`.
 
+## Аудит-лог
+
+Каждый HTTP-запрос к API пишется отдельной строкой в `logs/audit.log` (ротация раз в сутки, хранится 90 дней) — кто (логин+роль сотрудника или `public`), с какого IP, что (метод + путь + параметры запроса), с каким статусом ответа и за сколько миллисекунд. Ловятся и отказы (`401`/`403`), не только успешные запросы. Тела запросов и ответов не пишутся — там PIN и пароли.
+
+Пример строки:
+```
+2026-08-20T12:03:11.482+06:00 actor=admin(admin) ip=127.0.0.1 method=POST path=/api/v1/staff/appointments/apt-123/confirm status=200 durationMs=41
+2026-08-20T12:04:02.117+06:00 actor=public ip=203.0.113.7 method=POST path=/api/v1/public/appointments/VS-2026-4821/unlock status=409 durationMs=6
+```
+
+Реализация — `audit/AuditLogFilter.java`, конфигурация вывода — `logback-spring.xml`.
+
 ## Swagger
 
 `http://localhost:8080/swagger-ui.html`

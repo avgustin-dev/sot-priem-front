@@ -11,6 +11,7 @@ import kg.sot.reception.dto.SubmitFinalAnswerRequest;
 import kg.sot.reception.model.AppealStage;
 import kg.sot.reception.security.StaffPrincipal;
 import kg.sot.reception.service.AppealService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -43,6 +44,7 @@ public class StaffAppealController {
     }
 
     @PostMapping("/{id}/prep")
+    @PreAuthorize("hasAnyRole('RECEPTION','ADMIN')")
     public AppealCardDto completePrep(
             @PathVariable String id,
             @Valid @RequestBody CompletePrepRequest request,
@@ -52,11 +54,13 @@ public class StaffAppealController {
     }
 
     @PostMapping("/{id}/ready")
+    @PreAuthorize("hasAnyRole('RECEPTION','ADMIN')")
     public AppealCardDto markReady(@PathVariable String id) {
         return appealService.markReady(id);
     }
 
     @PostMapping("/{id}/reception")
+    @PreAuthorize("hasAnyRole('LEADERSHIP','ADMIN')")
     public AppealCardDto completeReception(
             @PathVariable String id,
             @Valid @RequestBody CompleteReceptionRequest request,
@@ -66,6 +70,7 @@ public class StaffAppealController {
     }
 
     @PostMapping("/{id}/control")
+    @PreAuthorize("hasAnyRole('RESPONSIBLE','ADMIN')")
     public AppealCardDto addControlLog(
             @PathVariable String id,
             @Valid @RequestBody AddControlLogRequest request,
@@ -75,6 +80,7 @@ public class StaffAppealController {
     }
 
     @PostMapping("/{id}/assignment-status")
+    @PreAuthorize("hasAnyRole('RESPONSIBLE','ADMIN')")
     public AppealCardDto setAssignmentStatus(
             @PathVariable String id,
             @Valid @RequestBody SetAssignmentStatusRequest request
@@ -83,6 +89,7 @@ public class StaffAppealController {
     }
 
     @PostMapping("/{id}/answer")
+    @PreAuthorize("hasAnyRole('RESPONSIBLE','ADMIN')")
     public AppealCardDto submitFinalAnswer(
             @PathVariable String id,
             @Valid @RequestBody SubmitFinalAnswerRequest request,
@@ -92,6 +99,7 @@ public class StaffAppealController {
     }
 
     @PostMapping("/{id}/stage")
+    @PreAuthorize("hasAnyRole('RECEPTION','LEADERSHIP','ADMIN')")
     public AppealCardDto setStage(
             @PathVariable String id,
             @Valid @RequestBody SetAppealStageRequest request,

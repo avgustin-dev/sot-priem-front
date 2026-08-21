@@ -5,6 +5,8 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import kg.sot.reception.config.JwtProperties;
 import kg.sot.reception.model.StaffUser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
@@ -15,12 +17,20 @@ import java.util.Date;
 @Service
 public class JwtService {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtService.class);
+    private static final String DEFAULT_SECRET_PREFIX = "change-me-development-only";
+
     private final JwtProperties properties;
     private final SecretKey key;
 
     public JwtService(JwtProperties properties) {
         this.properties = properties;
         this.key = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
+        if (properties.secret().startsWith(DEFAULT_SECRET_PREFIX)) {
+            log.warn("!!! APP_JWT_SECRET не задан — используется секрет по умолчанию из application.yml. "
+                    + "Любой, кто видел этот репозиторий, может подделать JWT сотрудника. "
+                    + "Обязательно задайте APP_JWT_SECRET перед выходом за пределы localhost. !!!");
+        }
     }
 
     public String generateToken(StaffUser user) {

@@ -13,6 +13,7 @@ import kg.sot.reception.model.AppointmentStatus;
 import kg.sot.reception.security.StaffPrincipal;
 import kg.sot.reception.service.AppointmentService;
 import kg.sot.reception.service.StaffUserService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -48,6 +49,7 @@ public class StaffAppointmentController {
     }
 
     @PostMapping("/appointments/{id}/confirm")
+    @PreAuthorize("hasAnyRole('RECEPTION','ADMIN')")
     public PublicAppointment confirm(
             @PathVariable String id,
             @RequestBody(required = false) ConfirmRequest request,
@@ -57,6 +59,7 @@ public class StaffAppointmentController {
     }
 
     @PostMapping("/appointments/{id}/reject")
+    @PreAuthorize("hasAnyRole('RECEPTION','ADMIN')")
     public PublicAppointment reject(
             @PathVariable String id,
             @Valid @RequestBody RejectRequest request,
@@ -66,6 +69,7 @@ public class StaffAppointmentController {
     }
 
     @PostMapping("/appointments/{id}/cancel")
+    @PreAuthorize("hasAnyRole('RECEPTION','ADMIN')")
     public PublicAppointment cancel(
             @PathVariable String id,
             @RequestBody(required = false) CancelRequest request,
@@ -75,11 +79,13 @@ public class StaffAppointmentController {
     }
 
     @PostMapping("/appointments/{id}/restore")
+    @PreAuthorize("hasAnyRole('RECEPTION','ADMIN')")
     public PublicAppointment restore(@PathVariable String id, @AuthenticationPrincipal StaffPrincipal principal) {
         return appointmentService.staffRestore(id, principal.getUser());
     }
 
     @PatchMapping("/appointments/{id}")
+    @PreAuthorize("hasAnyRole('RECEPTION','ADMIN')")
     public PublicAppointment patch(
             @PathVariable String id,
             @Valid @RequestBody PatchAppointmentRequest request,
@@ -89,6 +95,7 @@ public class StaffAppointmentController {
     }
 
     @PostMapping("/appointments/{id}/status")
+    @PreAuthorize("hasAnyRole('RECEPTION','LEADERSHIP','ADMIN')")
     public PublicAppointment setStatus(
             @PathVariable String id,
             @Valid @RequestBody SetStatusRequest request,
@@ -98,6 +105,7 @@ public class StaffAppointmentController {
     }
 
     @PostMapping("/appointments/{id}/reschedule")
+    @PreAuthorize("hasAnyRole('RECEPTION','ADMIN')")
     public PublicAppointment reschedule(
             @PathVariable String id,
             @Valid @RequestBody RescheduleRequest request,

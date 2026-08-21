@@ -45,6 +45,10 @@ public class ApiException extends RuntimeException {
         return new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INELIGIBLE", message);
     }
 
+    public static ApiException rateLimited(String message) {
+        return new ApiException(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", message);
+    }
+
     public HttpStatus getStatus() {
         return status;
     }

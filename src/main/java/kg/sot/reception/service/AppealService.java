@@ -23,27 +23,35 @@ import kg.sot.reception.repository.AppealCardRepository;
 import kg.sot.reception.repository.AppointmentRepository;
 import kg.sot.reception.util.IdGenerator;
 import kg.sot.reception.util.Mappers;
+import kg.sot.reception.util.RateLimiter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 
 @Service
 public class AppealService {
 
+    private static final int MAX_FEEDBACK_ATTEMPTS = 10;
+    private static final Duration FEEDBACK_WINDOW = Duration.ofHours(1);
+
     private final AppealCardRepository appealCardRepository;
     private final AppointmentRepository appointmentRepository;
     private final NotificationService notificationService;
+    private final RateLimiter rateLimiter;
 
     public AppealService(
             AppealCardRepository appealCardRepository,
             AppointmentRepository appointmentRepository,
-            NotificationService notificationService
+            NotificationService notificationService,
+            RateLimiter rateLimiter
     ) {
         this.appealCardRepository = appealCardRepository;
         this.appointmentRepository = appointmentRepository;
         this.notificationService = notificationService;
+        this.rateLimiter = rateLimiter;
     }
 
     @Transactional(readOnly = true)
@@ -187,6 +195,10 @@ public class AppealService {
 
     @Transactional
     public void submitFeedback(String code, FeedbackRequest req) {
+        String rateLimitKey = "feedback:" + code.trim().toUpperCase();
+        if (!rateLimiter.tryConsume(rateLimitKey, MAX_FEEDBACK_ATTEMPTS, FEEDBACK_WINDOW)) {
+            throw ApiException.rateLimited("Слишком много попыток. Повторите позже.");
+        }
         AppealCard appeal = appealCardRepository.findByCodeIgnoreCase(code)
                 .orElseThrow(() -> ApiException.notFound("Обращение не найдено"));
         if (appeal.getStage() == AppealStage.cancelled) {

@@ -27,12 +27,14 @@ import kg.sot.reception.repository.AppointmentRepository;
 import kg.sot.reception.util.IdGenerator;
 import kg.sot.reception.util.Mappers;
 import kg.sot.reception.util.PhoneUtil;
+import kg.sot.reception.util.RateLimiter;
 import kg.sot.reception.util.SlotCalculator;
 import kg.sot.reception.util.TargetWindowResolver;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.Year;
@@ -44,12 +46,16 @@ import java.util.Optional;
 @Service
 public class AppointmentService {
 
+    private static final int MAX_PIN_ATTEMPTS = 5;
+    private static final Duration PIN_WINDOW = Duration.ofMinutes(15);
+
     private final AppointmentRepository appointmentRepository;
     private final AppealCardRepository appealCardRepository;
     private final CmsService cmsService;
     private final SlotService slotService;
     private final NotificationService notificationService;
     private final PasswordEncoder passwordEncoder;
+    private final RateLimiter rateLimiter;
 
     public AppointmentService(
             AppointmentRepository appointmentRepository,
@@ -57,7 +63,8 @@ public class AppointmentService {
             CmsService cmsService,
             SlotService slotService,
             NotificationService notificationService,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            RateLimiter rateLimiter
     ) {
         this.appointmentRepository = appointmentRepository;
         this.appealCardRepository = appealCardRepository;
@@ -65,6 +72,7 @@ public class AppointmentService {
         this.slotService = slotService;
         this.notificationService = notificationService;
         this.passwordEncoder = passwordEncoder;
+        this.rateLimiter = rateLimiter;
     }
 
     // ---------------------------------------------------------------- public
@@ -522,10 +530,15 @@ public class AppointmentService {
     }
 
     private Appointment findByCodeAndPin(String code, String pin) {
+        String rateLimitKey = "pin:" + code.trim().toUpperCase();
+        if (!rateLimiter.tryConsume(rateLimitKey, MAX_PIN_ATTEMPTS, PIN_WINDOW)) {
+            throw ApiException.rateLimited("Слишком много попыток. Повторите позже.");
+        }
         Appointment appointment = findByCode(code);
         if (pin == null || !passwordEncoder.matches(pin.trim(), appointment.getPinHash())) {
             throw ApiException.invalidPin("Запись не найдена. Проверьте код и PIN.");
         }
+        rateLimiter.reset(rateLimitKey);
         return appointment;
     }
 
